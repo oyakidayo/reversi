@@ -1,0 +1,500 @@
+;;; othello
+;
+		
+		ASEG
+		ORG 0100H
+		EXTRN GAMEN
+INI		EQU 09000H
+BAN		EQU 0900BH      ;ban no hidari ue sumi
+INI_B1		EQU 0902CH
+INI_B2		EQU 09037H
+INI_W1		EQU 0902DH
+INI_W2		EQU 09036H
+BLOCK		EQU 0A000H
+BTEN	EQU 090A0H
+		;BLACK=0FFH
+		;WHITE=1
+
+
+START	EQU 0900BH
+
+
+		MVI A,0FFH
+		LXI H,COM
+		MOV M,A
+
+		
+		
+
+;kabe
+		MVI A,03
+		LXI H,INI
+		MVI B,064H
+	LOOP:	MOV M,A
+		INX H
+		DCR B
+		JNZ LOOP
+
+;banmen          
+		LXI H,BAN
+		XRA A
+
+		MVI B,08
+	
+LPB:	PUSH B
+		MVI B,08
+	
+LPBOARD:MOV M,A
+		INX H
+		DCR B
+		JNZ LPBOARD
+		POP B
+		DCR B
+		INX H
+		
+		INX H
+		JNZ LPB
+		
+
+;shokigamen	
+		MVI A,0FFH
+		LXI H,INI_B1
+		MOV M,A
+		LXI H,INI_B2
+		MOV M,A
+		LXI H,INI_W1
+		MVI A,01
+		MOV M,A
+		LXI H,INI_W2
+		MOV M,A
+		
+MNEXT2:	CALL GAMEN
+		CALL SERCH
+		CALL GAMEN
+		;CALL FEVAL
+		CALL HOZON
+		CALL GAMEN
+		CALL COMSIKO
+		CALL UNDO 
+		CALL GAMEN
+		;LDA PASS
+		;CPI 01H
+		;RNZ
+		JP MNEXT2 
+		
+
+;uteru tokorowo sagasu
+
+SERCH:	MVI A,01
+		STA TEBAN
+		CALL INPUT
+		
+		SHLD REV
+		
+		
+		
+		
+
+
+		
+SNEXT2: PUSH H
+		LXI H,FLAGREV
+		MOV A,00
+		MOV M,A
+		POP H
+		MOV A,M
+		SHLD REV
+		
+		
+		ORA A		;空白か！E
+		RNZ
+		LDA COM     ;COM=01 OR 0FFH Creg
+		;CALL BTENSO
+		MOV M,A	;koma wo utu
+		
+		
+		
+		PUSH B
+		PUSH D
+		PUSH H
+		CALL FLIP
+		POP H
+		POP D
+		POP B
+		
+		;LXI H,REV
+		MVI A,01
+		LXI H,FLAGREV       
+		CMP M
+		JZ NEXT3            ;flagrev=01 uteru
+		
+		LHLD REV		;打てなぁE??戻ぁE
+		XRA A
+		MOV M,A
+		
+		LDA TEBAN
+		ORA A
+		RZ
+		CALL UTENAI
+		;CNZ  MODOSU	;KAESENAKEREBA MODOSU
+		
+		JP SERCH
+NEXT3:	
+		
+				
+		
+		
+;NEXT:	LHLD REV
+;NEXT2:	INX H
+;		DCR B
+;		JNZ SNEXT2
+;		INX H
+;		INX H
+;
+;		DCR C
+;		
+;		JNZ SNEXT1
+		RET			
+
+
+
+
+
+FLIP:	LXI H,FLAGREV		;KAESENAKATTATOKI FLAGREV = 0
+		MVI M,00
+		LHLD REV
+		LDA MAN
+				;MAN A=1 OR FF Creg COM no koma
+		LXI B,0FFF5H
+		DAD B
+		
+		CMP M
+		
+	
+				;hidariue ga aiteno komanara vect e
+		CZ VECT
+		;CNZ MODOSU
+		INX B
+		LHLD REV
+		DAD B
+		CMP M
+	
+		
+		
+		CZ VECT
+		;CNZ MODOSU
+		INX B
+		LHLD REV
+		DAD B
+		CMP M
+		
+		
+		CZ VECT
+		;CNZ MODOSU
+		LXI B,0FFFFH
+		LHLD REV 
+		DAD B
+		
+		CMP M
+		
+		CZ VECT
+		;CNZ MODOSU
+
+		LXI B,0001H
+		
+		LHLD REV
+		DAD B
+		CMP M
+		
+		
+		CZ VECT
+		;CNZ MODOSU
+		LXI B,0009H
+		LHLD REV
+		DAD B
+		CMP M
+		CZ VECT
+		;CNZ MODOSU
+		
+		LXI B,000AH
+		LHLD REV
+		DAD B
+		CMP M
+		CZ VECT
+
+		;CNZ MODOSU		
+		LXI B,000BH
+		LHLD REV
+		DAD B
+		CMP M
+		CZ VECT
+		;CNZ MODOSU
+		
+		RET
+
+
+VECT:	;SHLD REV
+		PUSH H
+		PUSH D
+		PUSH B
+		MVI E,0
+VNEXT:	LDA COUNT
+		INR A
+		STA COUNT
+		LDA COM
+		MOV M,A 
+		INR E
+		
+		LDA MAN
+		DAD B
+		        ;TEKINO KOMA?
+		CMP M		;Areg=01
+		
+		JZ VNEXT
+		LDA COM  ;Mattan jibun no koma nara return
+		CMP M
+		JZ VNEXT3
+VNEXT2: CALL SUBHLBC
+		LDA MAN	;KAESITA KOMA MODOSU
+		MOV M,A
+		LDA COUNT
+		DCR A
+		STA COUNT
+		JNZ VNEXT2
+		JP VNEXT4
+VNEXT3:	LXI H,FLAGREV
+		MVI M,01
+		
+		;CALL BTENSO
+		
+		MVI A,01
+VNEXT4:	POP B
+		POP D	
+		POP H
+		RET
+		
+				;kabe,kuuhaku notokiha moto ni modosu
+MODOSU:	PUSH H
+		PUSH D
+		PUSH B
+		CALL GAMEN
+		CALL BTENSOM
+		POP B
+		POP D
+		POP H
+		;LXI H,FLAGREV
+		;MOV A,M
+		;DCR A
+		;JZ MNEXT
+		;MVI M,00	
+MNEXT:		RET
+		
+HOZON:	PUSH H
+		PUSH D
+		PUSH B
+		LXI H,0900BH
+		LXI D,BLOCK
+		MVI B,08H
+		MVI C,08H
+HNEXT:	MOV A,M
+		STAX D
+		
+		INX D
+		INX H
+		DCR B
+		JNZ HNEXT
+		DCR C
+		INC H
+		INC H
+		JZ  HRETURN
+		MVI B,08H
+		JP  HNEXT
+HRETURN:POP B
+		POP D
+		POP H
+		RET
+		
+UNDO:	LXI H,0900BH
+		LXI D,BLOCK
+		MVI B,040H
+		MVI B,08H
+		MVI C,08H
+UNEXT: LDAX D
+		MOV M,A
+		
+		INX D
+		INX H
+		DCR B
+		JNZ UNEXT
+		DCR C
+		INC H
+		INC H
+		JZ  URETURN
+		MVI B,08H
+		JP  UNEXT
+URETURN:POP B
+		POP D
+		POP H
+		RET
+		RET
+		
+SUBHLBC:MOV A,L
+		SUB C
+		MOV L,A
+		MOV A,H
+		SBB B
+		MOV H,A
+		RET	
+		
+INPUT:	MVI A,0FFH		;com=ff,man=01,teban=01
+		STA COM
+		MVI A,01H
+		STA MAN
+		MVI C,01H
+		
+		CALL 0005H
+		
+
+		
+		
+		CPI 'a'
+		JC INPUT
+		CPI 'i'
+		JNC INPUT
+		SUI 'a'
+		MOV B,A
+INPUT2:	PUSH B
+		MVI C,01H
+		CALL 0005H
+		POP B
+		CPI '1'
+		JC  INPUT2
+		CPI '8'
+		JNC INPUT2
+		SUI '0'
+		
+		MOV D,A
+		
+		
+		
+		
+	
+		MVI C,0BH
+		MVI A,00H
+		
+		
+INEXT2:	DCR D
+		JZ INEXT
+		ADI 0AH
+		JP  INEXT2
+INEXT:	ADD C
+		ADD B
+		LXI H,09000H
+		ADD L
+		MOV L,A
+		
+		RET
+UTENAI: MVI C,09
+		LXI D,DMOV
+		CALL 0005H
+		RET
+		
+COMSIKO:XRA A
+		STA TEBAN
+		STA PASS 
+		LXI H,START
+		MVI A,01H
+		STA COM
+		MVI A,0FFH
+		STA MAN
+CNEXT2:	SHLD REV
+		CALL SNEXT2
+		
+		PUSH H
+		LXI H,FLAGREV
+		MVI A,01		
+		CMP M
+		POP H
+		
+		JNZ CNEXT
+		RET
+CNEXT:	
+		
+		INR L
+		MVI A,040H
+		CMP L
+		JZ PASS1
+		JP CNEXT2		
+PASS1:	MVI C,09
+		LXI D,PASS2
+		CALL 0005H
+		MVI A,01H
+		STA PASS
+		RET		
+		
+		
+FEVAL:  CALL COMSIKO
+	         			;flag Z?E?Eなら打てめE
+		CALL PICE		;駒?E差数える
+		ADI 080H
+						;前?E評価値 駒?E差
+		
+		LHLD EVAL
+		CMP M
+		JC CHANGE
+		RET
+CHANGE: LHLD REV
+		SHLD EVALHL
+		STA EVAL
+		
+		JP FEVAL
+
+PICE:	MVI D,0000H		;自?E?E駒?E数
+		MVI C,0000H 	;コンピュータの駒?E数
+		MVI B,0040H
+		LXI H,0900BH 	;コンピュータと自?E?E駒?E数を数える
+ELOOP3  MVI A,0FFH
+		CMP M
+		JNZ ELOOP1
+		INR C
+ELOOP1: MVI A,001H
+		CMP M
+		JNZ ELOOP2
+		INC D
+ELOOP2	INR M
+		DCR B
+		JNP ELOOP3
+		MOV A,C
+		STA COM_PICE
+		MOV A,D
+		STA MAN_PICE
+		SUB C			;人間?E駒?Eコンピュータの駒を返す
+		RET
+EVALHL:		DS 2
+EVAL:		DB 080H
+COM_PICE:	DB 00
+MAN_PICE:	DB 00
+TEBAN:		DB 01
+REV:		DS 2	;kaesitakoma no address
+FLAGREV:	DS 2		
+ADDRESS:	DS 2
+PASS:		DB 00H
+COM:		DB 0FFH
+MAN:		DB 01H	
+
+IDATA:		DS 02H
+DMOV:		DB 'Do not Move!!','$'
+PASS2:		DB 'PASS!!','$'
+TABLE		DB  90,00,45,30,30,45,00,90
+			   ,00,00,55,20,20,55,00,00
+			   ,45,55,24,10,10,24,55,45
+			   ,30,20,68,00,00,68,20,30
+			   ,30,20,68,00,00,68,20,30
+			   ,45,55,24,10,10,24,55,45
+			   ,00,00,55,20,20,55,00,00
+			   ,90,00,45,30,30,45,00,90
+			
+		END
+		
+
+
